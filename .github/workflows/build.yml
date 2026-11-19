@@ -26,11 +26,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ARM GNU Toolchain 14.2.Rel1 from developer.arm.com (the GCC of the BK7231N builds), not Ubuntu's apt: its
+      # mirror stalled this job for 20+ minutes
       - name: ARM GCC
         if: matrix.cxx == 'arm-none-eabi-g++'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+          curl -sSfL -o "$RUNNER_TEMP/arm.tar.xz" \
+            "https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz"
+          mkdir -p "$RUNNER_TEMP/arm"
+          tar -xJf "$RUNNER_TEMP/arm.tar.xz" -C "$RUNNER_TEMP/arm" --strip-components=1
+          echo "$RUNNER_TEMP/arm/bin" >> "$GITHUB_PATH"
 
       - name: Compile
         run: |
