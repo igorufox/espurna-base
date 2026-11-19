@@ -1,0 +1,17 @@
+{
+  "name": "espurna-base",
+  "version": "1.0.0",
+  "description": "The platform header of the libraries ESPurna firmware uses (instead of Arduino.h): ESPurna's own string, the time, pin and interrupt calls and a few chip services as plain C declarations. Implemented by the firmware (ESPurna's lib/espurna-core), not here: the library knows nothing of the firmware",
+  "keywords": "espurna, platform, string",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/igorufox/espurna-base.git"
+  },
+  "license": "GPL-3.0-only",
+  "frameworks": "*",
+  "platforms": "*",
+  "build": {
+    "srcDir": "src",
+    "includeDir": "src"
+  }
+}
