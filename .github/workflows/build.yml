@@ -1,0 +1,64 @@
+name: Build
+
+# The library alone: every source and a user of <espurna_base.h> compiled by the host GCC and by the ARM GCC
+# (the BK7231N core). The calls of espurna_base.h are implemented by the firmware that uses the library, so this is a
+# compile check, nothing is linked
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: host
+            cxx: g++
+            flags: ""
+          - name: arm968e-s
+            cxx: arm-none-eabi-g++
+            flags: "-mcpu=arm968e-s -mthumb"
+    name: ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ARM GCC
+        if: matrix.cxx == 'arm-none-eabi-g++'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+
+      - name: Compile
+        run: |
+          set -e
+          ${{ matrix.cxx }} --version | head -1
+          FLAGS="-std=gnu++17 -Wall -Wextra -Isrc ${{ matrix.flags }}"
+          mkdir -p out
+          for f in src/*.cpp; do
+            echo "== $f"
+            ${{ matrix.cxx }} $FLAGS -c "$f" -o "out/$(basename "$f").o"
+          done
+          cat > out/use.cpp <<'EOF'
+          #include <espurna_base.h>
+          static void IRAM_ATTR on_edge() {}
+          int use() {
+              String text("text");
+              text += 1;
+              text += F(" and more");
+              uint8_t ip[4];
+              espurna_local_ip(ip);
+              uint8_t digest[16];
+              espurna_md5(text.c_str(), text.length(), digest);
+              pinMode(1, OUTPUT);
+              digitalWrite(1, HIGH);
+              attachInterrupt(2, on_edge, CHANGE);
+              delayMicroseconds(10);
+              return static_cast<int>(text.length() + millis() + micros()) + constrain(digest[0], 0, 9);
+          }
+          EOF
+          echo "== a user of espurna_base.h"
+          ${{ matrix.cxx }} $FLAGS -c out/use.cpp -o out/use.o
